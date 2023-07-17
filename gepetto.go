@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"flag"
 	"errors"
 	"io/ioutil"
 	"net/http"
@@ -32,11 +33,12 @@ type OpenAIResponse struct {
 	} `json:"choices"`
 }
 
-func callOpenAI(question string) (string, error) {
+func callOpenAI(question string, fileContent string) (string, error) {
+	systemMessage := "You are a helpful assistant.\nFile content:\n" + fileContent
 	requestData := OpenAIRequest{
 		Model: "gpt-3.5-turbo",
 		Messages: []Message{
-			{Role: "system", Content: "You are a helpful assistant."},
+			{Role: "system", Content: systemMessage},
 			{Role: "user", Content: question},
 		},
 	}
@@ -81,20 +83,45 @@ func sanitize(s string) string {
 }
 
 func main() {
-	args := os.Args
-	if len(args) == 1 {
+	attachFile := flag.String("attach", "", "Path to the file to attach as extra context")
+    flag.Parse()
+
+	fileContentStr := ""
+    // Check if the user provided a file to attach
+    if *attachFile != "" {
+        fileContent, err := ioutil.ReadFile(*attachFile)
+        if err != nil {
+            fmt.Println("Error reading file:", err)
+            return
+        }
+
+        // Limit the size of the file content to 3000 characters
+        fileContentStr = string(fileContent)
+        if len(fileContentStr) > 3000 {
+            fileContentStr = fileContentStr[:3000]
+        }
+
+        // Now you can use `fileContentStr` in your call to the OpenAI API,
+        // for example by adding it as a new system message before the user's message.
+    }
+
+	nonFlagArgs := flag.Args()
+	question := strings.Join(nonFlagArgs, " ")
+	question = strings.TrimSpace(question)  // Remove white space from both ends of the string
+
+	fmt.Println("Asking GPT-3:", question)
+	if len(question) == 0 {
 		fmt.Println("Please type your question. Press control+d to finish.")
 		reader := bufio.NewReader(os.Stdin)
 		input, _ := reader.ReadString('\n')
-		answer, err := callOpenAI(input)
+		answer, err := callOpenAI(input, fileContentStr)
 		if err != nil {
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
 		fmt.Println(answer)
 	} else {
-		question := strings.Join(args[1:], " ")
-		answer, err := callOpenAI(question)
+		answer, err := callOpenAI(question, fileContentStr)
 		if err != nil {
 			fmt.Println("Error:", err)
 			os.Exit(1)
