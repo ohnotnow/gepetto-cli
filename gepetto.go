@@ -4,128 +4,137 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"flag"
-	"errors"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 	"os"
-	"strings"
+	"os/user"
 )
 
-const OpenAIURL = "https://api.openai.com/v1/chat/completions"
+func main() {
+	var model string
+	var contexts multiFlag
 
-type Message struct {
-	Role string `json:"role"`
-	Content string `json:"content"`
-}
+	flag.StringVar(&model, "model", "gpt-3.5-turbo-16k", "Model to use for OpenAI (default is gpt-3.5-turbo-16k)")
+	flag.Var(&contexts, "context", "Context file (can be used multiple times, use -- for stdin)")
 
-type OpenAIRequest struct {
-	Model    string    `json:"model"`
-	Messages []Message `json:"messages"`
-}
+	flag.Parse()
 
-type OpenAIResponse struct {
-	Choices []struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
-}
-
-func callOpenAI(question string, fileContent string) (string, error) {
-	systemMessage := "You are a helpful assistant.\nFile content:\n" + fileContent
-	requestData := OpenAIRequest{
-		Model: "gpt-3.5-turbo",
-		Messages: []Message{
-			{Role: "system", Content: systemMessage},
-			{Role: "user", Content: question},
-		},
+	if flag.NArg() == 0 {
+		fmt.Println("Please provide a message to send to the model.")
+		return
 	}
-	requestBody, _ := json.Marshal(requestData)
 
-	request, _ := http.NewRequest("POST", OpenAIURL, bytes.NewBuffer(requestBody))
-	request.Header.Set("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("OPENAI_API_KEY")))
-	request.Header.Set("Content-Type", "application/json")
+	apiKey := os.Getenv("OPENAI_API_KEY")
+	userMessage := flag.Arg(0)
+	for _, contextFile := range contexts {
+		var fileName, fileContent string
+		if contextFile == "--" {
+			fileName = "STDIN"
+			scanner := bufio.NewScanner(os.Stdin)
+			for scanner.Scan() {
+				fileContent += scanner.Text() + "\n"
+			}
+		} else {
+			if contextFile[0] == '~' {
+				usr, _ := user.Current()
+				contextFile = usr.HomeDir + contextFile[1:]
+			}
+			fileName = contextFile
+			content, err := ioutil.ReadFile(contextFile)
+			if err != nil {
+				fmt.Println("Error reading context file:", err)
+				return
+			}
+			fileContent = string(content)
+		}
+		userMessage += fmt.Sprintf(" -- context: %s -- ```%s```", fileName, fileContent)
+	}
+
+	const maxLength = 12000
+	if len(userMessage) > maxLength {
+		userMessage = userMessage[:maxLength]
+	}
+
+	answer, err := askOpenAI(apiKey, model, userMessage)
+	if err != nil {
+		fmt.Println("Error interacting with OpenAI:", err)
+		return
+	}
+
+	fmt.Println("Answer:", answer)
+}
+
+func askOpenAI(apiKey, model, userMessage string) (string, error) {
+	apiEndpoint := "https://api.openai.com/v1/chat/completions"
+	messages := []map[string]string{
+		{"role": "system", "content": "You are a helpful assistant."},
+		{"role": "user", "content": userMessage},
+	}
+
+	payload := map[string]interface{}{
+		"model":    model,
+		"messages": messages,
+	}
+	payloadJSON, _ := json.Marshal(payload)
+
+	req, err := http.NewRequest("POST", apiEndpoint, bytes.NewBuffer(payloadJSON))
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+apiKey)
 
 	client := &http.Client{}
-	response, err := client.Do(request)
+	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
 	}
-	defer response.Body.Close()
+	defer resp.Body.Close()
 
-	responseBody := &OpenAIResponse{}
-	err = json.NewDecoder(response.Body).Decode(responseBody)
+	body, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
-	// Check if Choices is not empty
-	if len(responseBody.Choices) == 0 {
-		bodyBytes, _ := ioutil.ReadAll(response.Body)
-		bodyString := string(bodyBytes)
-		fmt.Println(bodyString)
-		return "", errors.New("no choices in OpenAI response")
+	var result map[string]interface{}
+	if err := json.Unmarshal(body, &result); err != nil {
+		return "", err
 	}
 
-	return strings.TrimSpace(responseBody.Choices[0].Message.Content), nil
-}
-
-func sanitize(s string) string {
-    result := ""
-    for _, r := range s {
-        if r >= 32 && r <= 126 {
-            result += string(r)
-        }
-    }
-    return result
-}
-
-func main() {
-	attachFile := flag.String("attach", "", "Path to the file to attach as extra context")
-    flag.Parse()
-
-	fileContentStr := ""
-    // Check if the user provided a file to attach
-    if *attachFile != "" {
-        fileContent, err := ioutil.ReadFile(*attachFile)
-        if err != nil {
-            fmt.Println("Error reading file:", err)
-            return
-        }
-
-        // Limit the size of the file content to 3000 characters
-        fileContentStr = string(fileContent)
-        if len(fileContentStr) > 3000 {
-            fileContentStr = fileContentStr[:3000]
-        }
-
-        // Now you can use `fileContentStr` in your call to the OpenAI API,
-        // for example by adding it as a new system message before the user's message.
-    }
-
-	nonFlagArgs := flag.Args()
-	question := strings.Join(nonFlagArgs, " ")
-	question = strings.TrimSpace(question)  // Remove white space from both ends of the string
-
-	fmt.Println("Asking GPT-3:", question)
-	if len(question) == 0 {
-		fmt.Println("Please type your question. Press control+d to finish.")
-		reader := bufio.NewReader(os.Stdin)
-		input, _ := reader.ReadString('\n')
-		answer, err := callOpenAI(input, fileContentStr)
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
-		fmt.Println(answer)
-	} else {
-		answer, err := callOpenAI(question, fileContentStr)
-		if err != nil {
-			fmt.Println("Error:", err)
-			os.Exit(1)
-		}
-		fmt.Println(sanitize(answer))
+	choices, ok := result["choices"].([]interface{})
+	if !ok || len(choices) == 0 {
+		// Print the entire response to help diagnose the issue
+		return "", fmt.Errorf("unexpected response from OpenAI: %v", result)
 	}
+
+	choice, ok := choices[0].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("unexpected format for choice in response from OpenAI: %v", choices[0])
+	}
+
+	message, ok := choice["message"].(map[string]interface{})
+	if !ok {
+		return "", fmt.Errorf("unexpected format for message in response from OpenAI: %v", choice)
+	}
+
+	content, ok := message["content"].(string)
+	if !ok {
+		return "", fmt.Errorf("unexpected format for content in response from OpenAI: %v", message)
+	}
+
+	return content, nil
+}
+
+type multiFlag []string
+
+func (f *multiFlag) String() string {
+	return fmt.Sprint(*f)
+}
+
+func (f *multiFlag) Set(value string) error {
+	*f = append(*f, value)
+	return nil
 }
