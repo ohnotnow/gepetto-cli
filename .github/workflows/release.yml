@@ -48,6 +48,8 @@ jobs:
 
       - name: Upload macOS ARM binary
         uses: actions/upload-release-asset@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Use the custom secret
         with:
             upload_url: ${{ steps.create_release.outputs.upload_url }}
             asset_path: ./gepetto-mac-arm-${{ env.TAG_NAME }}
@@ -56,6 +58,8 @@ jobs:
 
       - name: Upload macOS Intel binary
         uses: actions/upload-release-asset@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Use the custom secret
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./gepetto-mac-intel-${{ env.TAG_NAME }}
@@ -64,6 +68,8 @@ jobs:
 
       - name: Upload Linux Intel binary
         uses: actions/upload-release-asset@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Use the custom secret
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./gepetto-linux-intel-${{ env.TAG_NAME }}
@@ -72,6 +78,8 @@ jobs:
 
       - name: Upload Windows binary
         uses: actions/upload-release-asset@v1
+        env:
+            GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Use the custom secret
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./gepetto-windows-${{ env.TAG_NAME }}.exe
