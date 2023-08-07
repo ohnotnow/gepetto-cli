@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+        TAG_NAME: ${{ github.ref_name }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
@@ -17,17 +19,21 @@ jobs:
         with:
           go-version: '1.17' # specify the Go version
 
+      - name: Extract tag name
+        id: get_tag
+        run: echo "TAG_NAME=${GITHUB_REF##*/}" >> $GITHUB_ENV
+
       - name: Build macOS ARM binary
-        run: GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o gepetto-mac-arm-${GITHUB_REF##*/} gepetto.go
+        run: GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o gepetto-mac-arm-${{ env.TAG_NAME }} gepetto.go
 
       - name: Build macOS Intel binary
-        run: GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o gepetto-mac-intel-${GITHUB_REF##*/} gepetto.go
+        run: GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o gepetto-mac-intel-${{ env.TAG_NAME }} gepetto.go
 
       - name: Build Linux Intel binary
-        run: GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o gepetto-linux-intel-${GITHUB_REF##*/} gepetto.go
+        run: GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o gepetto-linux-intel-${{ env.TAG_NAME }} gepetto.go
 
       - name: Build Windows binary
-        run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o gepetto-windows-${GITHUB_REF##*/}.exe gepetto.go
+        run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o gepetto-windows-${{ env.TAG_NAME }}.exe gepetto.go
 
       - name: Create GitHub Release
         id: create_release
@@ -43,31 +49,31 @@ jobs:
       - name: Upload macOS ARM binary
         uses: actions/upload-release-asset@v1
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gepetto-mac-arm-${GITHUB_REF##*/}
-          asset_name: gepetto-mac-arm-${GITHUB_REF##*/}
-          asset_content_type: application/octet-stream
+            upload_url: ${{ steps.create_release.outputs.upload_url }}
+            asset_path: ./gepetto-mac-arm-${{ env.TAG_NAME }}
+            asset_name: gepetto-mac-arm-${{ env.TAG_NAME }}
+            asset_content_type: application/octet-stream
 
       - name: Upload macOS Intel binary
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gepetto-mac-intel-${GITHUB_REF##*/}
-          asset_name: gepetto-mac-intel-${GITHUB_REF##*/}
+          asset_path: ./gepetto-mac-intel-${{ env.TAG_NAME }}
+          asset_name: gepetto-mac-intel-${{ env.TAG_NAME }}
           asset_content_type: application/octet-stream
 
       - name: Upload Linux Intel binary
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gepetto-linux-intel-${GITHUB_REF##*/}
-          asset_name: gepetto-linux-intel-${GITHUB_REF##*/}
+          asset_path: ./gepetto-linux-intel-${{ env.TAG_NAME }}
+          asset_name: gepetto-linux-intel-${{ env.TAG_NAME }}
           asset_content_type: application/octet-stream
 
       - name: Upload Windows binary
         uses: actions/upload-release-asset@v1
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gepetto-windows-${GITHUB_REF##*/}.exe
-          asset_name: gepetto-windows-${GITHUB_REF##*/}.exe
+          asset_path: ./gepetto-windows-${{ env.TAG_NAME }}.exe
+          asset_name: gepetto-windows-${{ env.TAG_NAME }}.exe
           asset_content_type: application/octet-stream
