@@ -27,5 +27,5 @@ You can also pass a flag to read in the contents of a file to use as context (re
 
 You can also pass multiple files and/or STDIN.
 ```
-./gepetto --context=mydataset.csv --context=~/system.log --context=-- 'What does any of this mean?!?!?'
+cat some_text.txt | ./gepetto --context=mydataset.csv --context=~/system.log --context=-- 'What does any of this mean?!?!?'
 ```
