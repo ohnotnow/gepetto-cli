@@ -15,9 +15,11 @@ import (
 func main() {
 	var model string
 	var contexts multiFlag
+	var chat bool
 
 	flag.StringVar(&model, "model", "gpt-3.5-turbo-16k", "Model to use for OpenAI (default is gpt-3.5-turbo-16k)")
 	flag.Var(&contexts, "context", "Context file (can be used multiple times, use -- for stdin)")
+	flag.BoolVar(&chat, "chat", false, "Enable chat mode (conversational interaction with the model)")
 
 	flag.Parse()
 
@@ -57,25 +59,81 @@ func main() {
 		userMessage = userMessage[:maxLength]
 	}
 
-	answer, err := askOpenAI(apiKey, model, userMessage)
-	if err != nil {
-		fmt.Println("Error interacting with OpenAI:", err)
-		return
-	}
+	if chat {
+		// Initialize conversation history
+		var conversation []map[string]string
+		conversation = append(conversation, map[string]string{"role": "system", "content": "You are a helpful assistant."})
 
-	fmt.Println("Answer:", answer)
+		// Handle initial question if provided
+		if userMessage != "" {
+			// Add user's initial message to the conversation
+			conversation = append(conversation, map[string]string{"role": "user", "content": userMessage})
+
+			// Ask OpenAI
+			answer, err := askOpenAI(apiKey, model, conversation)
+			if err != nil {
+				fmt.Println("Error interacting with OpenAI:", err)
+				return
+			}
+
+			// Add OpenAI's response to the conversation
+			conversation = append(conversation, map[string]string{"role": "assistant", "content": answer})
+
+			// Print OpenAI's response
+			fmt.Println("Assistant:", answer)
+		}
+
+		// Start chat mode loop
+		// ... (same code as above for chat mode)
+		// Start chat mode loop
+		reader := bufio.NewReader(os.Stdin)
+		for {
+			fmt.Print("You: ")
+			userMessage, err := reader.ReadString('\n')
+			if err != nil || userMessage == "\n" { // Exit if Ctrl-D is pressed or input is empty
+				fmt.Println("Exiting chat mode.")
+				return
+			}
+
+			// Add user's message to the conversation
+			conversation = append(conversation, map[string]string{"role": "user", "content": userMessage[:len(userMessage)-1]})
+
+			// Ask OpenAI
+			answer, err := askOpenAI(apiKey, model, conversation)
+			if err != nil {
+				fmt.Println("Error interacting with OpenAI:", err)
+				return
+			}
+
+			// Add OpenAI's response to the conversation
+			conversation = append(conversation, map[string]string{"role": "assistant", "content": answer})
+
+			// Print OpenAI's response
+			fmt.Println("Assistant:", answer)
+		}
+	} else {
+		conversation := []map[string]string{
+			{"role": "system", "content": "You are a helpful assistant."},
+			{"role": "user", "content": userMessage},
+		}
+
+		// Call the askOpenAI function with the conversation history
+		answer, err := askOpenAI(apiKey, model, conversation)
+		if err != nil {
+			fmt.Println("Error interacting with OpenAI:", err)
+			return
+		}
+
+		fmt.Println("Answer:", answer)
+	}
 }
 
-func askOpenAI(apiKey, model, userMessage string) (string, error) {
+func askOpenAI(apiKey, model string, conversation []map[string]string) (string, error) {
 	apiEndpoint := "https://api.openai.com/v1/chat/completions"
-	messages := []map[string]string{
-		{"role": "system", "content": "You are a helpful assistant."},
-		{"role": "user", "content": userMessage},
-	}
 
 	payload := map[string]interface{}{
 		"model":    model,
-		"messages": messages,
+		"messages": conversation,
 	}
 	payloadJSON, _ := json.Marshal(payload)
 
@@ -99,6 +157,8 @@ func askOpenAI(apiKey, model, userMessage string) (string, error) {
 		return "", err
 	}
 
+	fmt.Println("Raw response from OpenAI:", string(body)) // Print the raw response
+
 	var result map[string]interface{}
 	if err := json.Unmarshal(body, &result); err != nil {
 		return "", err
@@ -106,26 +166,25 @@ func askOpenAI(apiKey, model, userMessage string) (string, error) {
 
 	choices, ok := result["choices"].([]interface{})
 	if !ok || len(choices) == 0 {
-		// Print the entire response to help diagnose the issue
-		return "", fmt.Errorf("unexpected response from OpenAI: %v", result)
+		return "", fmt.Errorf("unexpected response format: no choices found")
 	}
 
 	choice, ok := choices[0].(map[string]interface{})
 	if !ok {
-		return "", fmt.Errorf("unexpected format for choice in response from OpenAI: %v", choices[0])
+		return "", fmt.Errorf("unexpected response format: choice is not a map")
 	}
 
 	message, ok := choice["message"].(map[string]interface{})
 	if !ok {
-		return "", fmt.Errorf("unexpected format for message in response from OpenAI: %v", choice)
+		return "", fmt.Errorf("unexpected response format: message is not a map")
 	}
 
-	content, ok := message["content"].(string)
+	text, ok := message["content"].(string)
 	if !ok {
-		return "", fmt.Errorf("unexpected format for content in response from OpenAI: %v", message)
+		return "", fmt.Errorf("unexpected response format: content is not a string")
 	}
 
-	return content, nil
+	return text, nil
 }
 
 type multiFlag []string

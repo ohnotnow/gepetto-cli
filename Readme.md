@@ -29,3 +29,8 @@ You can also pass multiple files and/or STDIN.
 ```
 cat some_text.txt | ./gepetto --context=mydataset.csv --context=~/system.log --context=-- 'What does any of this mean?!?!?'
 ```
+
+You can also enter a chat mode if you think you'll want to ask multiple questions:
+```
+cat some_text.txt | ./gepetto --context=-- --chat 'What is the reason for the errors in this file?'
+```
