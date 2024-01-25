@@ -39,7 +39,7 @@ jobs:
         id: create_release
         uses: actions/create-release@v1
         env:
-          GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           tag_name: ${{ github.ref }}
           release_name: Release ${{ github.ref }}
@@ -49,7 +49,7 @@ jobs:
       - name: Upload macOS ARM binary
         uses: actions/upload-release-asset@v1
         env:
-            GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Use the custom secret
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the custom secret
         with:
             upload_url: ${{ steps.create_release.outputs.upload_url }}
             asset_path: ./gepetto-mac-arm-${{ env.TAG_NAME }}
@@ -59,7 +59,7 @@ jobs:
       - name: Upload macOS Intel binary
         uses: actions/upload-release-asset@v1
         env:
-            GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Use the custom secret
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the custom secret
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./gepetto-mac-intel-${{ env.TAG_NAME }}
@@ -69,7 +69,7 @@ jobs:
       - name: Upload Linux Intel binary
         uses: actions/upload-release-asset@v1
         env:
-            GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Use the custom secret
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the custom secret
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./gepetto-linux-intel-${{ env.TAG_NAME }}
@@ -79,7 +79,7 @@ jobs:
       - name: Upload Windows binary
         uses: actions/upload-release-asset@v1
         env:
-            GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }} # Use the custom secret
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the custom secret
         with:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./gepetto-windows-${{ env.TAG_NAME }}.exe
