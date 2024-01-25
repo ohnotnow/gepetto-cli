@@ -24,8 +24,7 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() == 0 {
-		fmt.Println("Please provide a message to send to the model.")
-		return
+		chat = true
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
