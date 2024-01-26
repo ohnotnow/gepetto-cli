@@ -17,7 +17,7 @@ jobs:
       - name: Setup Go
         uses: actions/setup-go@v2
         with:
-          go-version: '1.17' # specify the Go version
+          go-version: '1.21' # specify the Go version
 
       - name: Extract tag name
         id: get_tag
@@ -35,53 +35,16 @@ jobs:
       - name: Build Windows binary
         run: GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o gepetto-windows-${{ env.TAG_NAME }}.exe gepetto.go
 
-      - name: Create GitHub Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Create Release and Upload Binaries
+        uses: softprops/action-gh-release@v1
         with:
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
+          files: |
+            gepetto-mac-arm-${{ env.TAG_NAME }}
+            gepetto-mac-intel-${{ env.TAG_NAME }}
+            gepetto-linux-intel-${{ env.TAG_NAME }}
+            gepetto-windows-${{ env.TAG_NAME }}.exe
+          tag_name: ${{ env.TAG_NAME }}
           draft: false
           prerelease: false
-
-      - name: Upload macOS ARM binary
-        uses: actions/upload-release-asset@v1
         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the custom secret
-        with:
-            upload_url: ${{ steps.create_release.outputs.upload_url }}
-            asset_path: ./gepetto-mac-arm-${{ env.TAG_NAME }}
-            asset_name: gepetto-mac-arm-${{ env.TAG_NAME }}
-            asset_content_type: application/octet-stream
-
-      - name: Upload macOS Intel binary
-        uses: actions/upload-release-asset@v1
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the custom secret
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gepetto-mac-intel-${{ env.TAG_NAME }}
-          asset_name: gepetto-mac-intel-${{ env.TAG_NAME }}
-          asset_content_type: application/octet-stream
-
-      - name: Upload Linux Intel binary
-        uses: actions/upload-release-asset@v1
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the custom secret
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gepetto-linux-intel-${{ env.TAG_NAME }}
-          asset_name: gepetto-linux-intel-${{ env.TAG_NAME }}
-          asset_content_type: application/octet-stream
-
-      - name: Upload Windows binary
-        uses: actions/upload-release-asset@v1
-        env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Use the custom secret
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./gepetto-windows-${{ env.TAG_NAME }}.exe
-          asset_name: gepetto-windows-${{ env.TAG_NAME }}.exe
-          asset_content_type: application/octet-stream
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
