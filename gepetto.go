@@ -17,7 +17,7 @@ func main() {
 	var contexts multiFlag
 	var chat bool
 
-	flag.StringVar(&model, "model", "gpt-3.5-turbo-16k", "Model to use for OpenAI (default is gpt-3.5-turbo-16k)")
+	flag.StringVar(&model, "model", "gpt-4o", "Model to use for OpenAI (default is gpt-4o)")
 	flag.Var(&contexts, "context", "Context file (can be used multiple times, use -- for stdin)")
 	flag.BoolVar(&chat, "chat", false, "Enable chat mode (conversational interaction with the model)")
 
@@ -89,7 +89,7 @@ func main() {
 		for {
 			fmt.Print("You: ")
 			userMessage, err := reader.ReadString('\n')
-			if err != nil || userMessage == "\n" { // Exit if Ctrl-D is pressed or input is empty
+			if userMessage == "\n" { // Exit if Ctrl-D is pressed or input is empty
 				fmt.Println("Exiting chat mode.")
 				return
 			}
