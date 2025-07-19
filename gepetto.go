@@ -58,10 +58,11 @@ func main() {
 		userMessage = userMessage[:maxLength]
 	}
 
+	const systemMessage = "You are a helpful assistant. If you are asked for a script or cli command - output just the script or command - no other output"
 	if chat {
 		// Initialize conversation history
 		var conversation []map[string]string
-		conversation = append(conversation, map[string]string{"role": "system", "content": "You are a helpful assistant."})
+		conversation = append(conversation, map[string]string{"role": "system", "content": systemMessage})
 
 		// Handle initial question if provided
 		if userMessage != "" {
@@ -112,7 +113,7 @@ func main() {
 		}
 	} else {
 		conversation := []map[string]string{
-			{"role": "system", "content": "You are a helpful assistant."},
+			{"role": "system", "content": systemMessage},
 			{"role": "user", "content": userMessage},
 		}
 
