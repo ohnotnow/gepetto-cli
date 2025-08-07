@@ -17,7 +17,7 @@ func main() {
 	var contexts multiFlag
 	var chat bool
 
-	flag.StringVar(&model, "model", "o4-mini", "Model to use for OpenAI (default is o4-mini)")
+	flag.StringVar(&model, "model", "gpt-5", "Model to use for OpenAI (default is gpt-5)")
 	flag.Var(&contexts, "context", "Context file (can be used multiple times, use -- for stdin)")
 	flag.BoolVar(&chat, "chat", false, "Enable chat mode (conversational interaction with the model)")
 
