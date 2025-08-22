@@ -17,10 +17,15 @@ func main() {
 	var model string
 	var contexts multiFlag
 	var chat bool
+	var verbosity string
+	var reasoningEffort string
 
 	flag.StringVar(&model, "model", "gpt-5", "Model to use for OpenAI (default is gpt-5)")
 	flag.Var(&contexts, "context", "Context file (can be used multiple times, use -- for stdin)")
 	flag.BoolVar(&chat, "chat", false, "Enable chat mode (conversational interaction with the model)")
+	flag.StringVar(&verbosity, "verbosity", "medium", "Verbosity level (high, medium, low)")
+	// add a flag to control the reasoning effort of the model, between minimal, low, medium, and high
+	flag.StringVar(&reasoningEffort, "reasoning-effort", "medium", "Reasoning effort (minimal, low, medium, high)")
 
 	flag.Parse()
 
@@ -72,7 +77,7 @@ func main() {
 			conversation = append(conversation, map[string]string{"role": "user", "content": userMessage})
 
 			// Ask OpenAI
-			answer, err := askOpenAI(apiKey, model, conversation)
+			answer, err := askOpenAI(apiKey, model, conversation, verbosity, reasoningEffort)
 			if err != nil {
 				fmt.Println("Error interacting with OpenAI:", err)
 				return
@@ -101,7 +106,7 @@ func main() {
 			conversation = append(conversation, map[string]string{"role": "user", "content": userMessage[:len(userMessage)-1]})
 
 			// Ask OpenAI
-			answer, err := askOpenAI(apiKey, model, conversation)
+			answer, err := askOpenAI(apiKey, model, conversation, verbosity, reasoningEffort)
 			if err != nil {
 				fmt.Println("Error interacting with OpenAI:", err)
 				return
@@ -120,7 +125,7 @@ func main() {
 		}
 
 		// Call the askOpenAI function with the conversation history
-		answer, err := askOpenAI(apiKey, model, conversation)
+		answer, err := askOpenAI(apiKey, model, conversation, verbosity, reasoningEffort)
 		if err != nil {
 			fmt.Println("Error interacting with OpenAI:", err)
 			return
@@ -130,12 +135,14 @@ func main() {
 	}
 }
 
-func askOpenAI(apiKey, model string, conversation []map[string]string) (string, error) {
+func askOpenAI(apiKey, model string, conversation []map[string]string, verbosity string, reasoningEffort string) (string, error) {
 	apiEndpoint := "https://api.openai.com/v1/chat/completions"
 
 	payload := map[string]interface{}{
-		"model":    model,
-		"messages": conversation,
+		"model":            model,
+		"messages":         conversation,
+		"verbosity":        verbosity,
+		"reasoning_effort": reasoningEffort,
 	}
 	payloadJSON, _ := json.Marshal(payload)
 
