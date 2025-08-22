@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/user"
+	"strings"
 )
 
 func main() {
@@ -28,7 +29,8 @@ func main() {
 	}
 
 	apiKey := os.Getenv("OPENAI_API_KEY")
-	userMessage := flag.Arg(0)
+	// Join all positional args so you can type: gpt this is my question
+	userMessage := strings.Join(flag.Args(), " ")
 	for _, contextFile := range contexts {
 		var fileName, fileContent string
 		if contextFile == "--" {
